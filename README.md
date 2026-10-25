@@ -1,34 +1,56 @@
-# Copilot Agent Library
+# Claude Code Agent Library
 
-A comprehensive collection of **30+ production-ready custom GitHub Copilot agents** for developers, teams, and organizations. Download, customize, and deploy powerful AI agents to supercharge your development workflow.
+**37 sub-agents for [Claude Code](https://code.claude.com)**, each a single Markdown file you can copy, edit and version. Every agent has a focused job, a model and tool list that fit it, and a defined way of reporting back.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Agents](https://img.shields.io/badge/Agents-30+-green.svg)](#agent-categories)
+[![Agents](https://img.shields.io/badge/Agents-37-green.svg)](#agent-categories)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ---
 
-## Quick Start
+## Install
 
-### For CLI Users
+Pick one route.
 
-1. **Choose an agent** from the [Agent Categories](#agent-categories) below
-2. **Download the agent file** (`.agent.md`) to your local machine
-3. **Copy to your agents directory**:
- ```bash
- cp path/to/agent.agent.md ~/.github/agents/
- ```
-4. **Use the agent**:
- ```bash
- copilot agent run agent-name "Your task here"
- ```
+**1. All projects** (user scope):
 
-### For IDE Users (VS Code)
+```bash
+mkdir -p ~/.claude/agents
+cp agents/*/*.agent.md ~/.claude/agents/
+```
 
-1. **Choose an agent** from the [Agent Categories](#agent-categories) below
-2. **Download the agent file** (`.agent.md`)
-3. **Add to your workspace**: `.github/agents/`
-4. **Invoke in chat**: `@agent-name your task here`
+**2. One project** (commit it so your team gets it too):
+
+```bash
+mkdir -p .claude/agents
+cp agents/coding/python-expert.agent.md .claude/agents/
+```
+
+**3. Plugin** (whole library; the manifest `.claude-plugin/plugin.json` names it `agent-library`). Load it from a local checkout:
+
+```bash
+claude --plugin-dir /path/to/this/repo
+```
+
+The marketplace route (`/plugin marketplace add <owner>/<repo>`, then `/plugin install agent-library@<marketplace>`) needs a `.claude-plugin/marketplace.json`, which this repo does not have yet.
+
+Check the install with `/agents` inside a Claude Code session.
+
+## Use
+
+Inside a session, mention the agent:
+
+```
+@python-expert add type hints to utils.py
+```
+
+From a script or CI (headless; the agent runs as the main thread):
+
+```bash
+claude --agent python-expert "Add type hints to utils.py"
+```
+
+See [Invocation](docs/invocation.md) for when to use which.
 
 ---
 
@@ -36,168 +58,116 @@ A comprehensive collection of **30+ production-ready custom GitHub Copilot agent
 
 ### Orchestration (3 agents)
 
-Coordinate multiple agents and manage complex workflows.
-
-| Agent | Description | Use Cases |
-|-------|-------------|-----------|
-| [**Orchestrator**](agents/orchestration/orchestrator.agent.md) | Multi-agent coordinator and task delegator | Complex projects requiring multiple specialized agents |
-| [**Workflow Manager**](agents/orchestration/workflow-manager.agent.md) | Sequential and parallel task execution | CI/CD pipelines, automated workflows |
-| [**Project Manager**](agents/orchestration/project-manager.agent.md) | Sprint planning and stakeholder coordination | Agile project management, roadmap planning |
+| Agent | Description |
+|-------|-------------|
+| [**orchestrator**](agents/orchestration/orchestrator.agent.md) | Splits a large task and delegates to specialists |
+| [**workflow-manager**](agents/orchestration/workflow-manager.agent.md) | Sequential and parallel task execution |
+| [**project-manager**](agents/orchestration/project-manager.agent.md) | Sprint planning and stakeholder coordination |
 
 ### Full-Stack Development (6 agents)
 
-End-to-end development from frontend to backend to mobile.
+| Agent | Description |
+|-------|-------------|
+| [**frontend-developer**](agents/fullstack/frontend-developer.agent.md) | React/Vue/Angular, component architecture |
+| [**backend-developer**](agents/fullstack/backend-developer.agent.md) | APIs, authentication, database integration |
+| [**fullstack-expert**](agents/fullstack/fullstack-expert.agent.md) | End-to-end feature implementation |
+| [**mobile-developer**](agents/fullstack/mobile-developer.agent.md) | React Native, Flutter, native iOS/Android |
+| [**api-designer**](agents/fullstack/api-designer.agent.md) | REST principles, OpenAPI specs, versioning |
+| [**database-architect**](agents/fullstack/database-architect.agent.md) | Schema design, normalization, query optimization |
 
-| Agent | Description | Use Cases |
-|-------|-------------|-----------|
-| [**Frontend Developer**](agents/fullstack/frontend-developer.agent.md) | React/Vue/Angular expert, component architecture | Building modern web UIs, state management |
-| [**Backend Developer**](agents/fullstack/backend-developer.agent.md) | API design, authentication, database integration | RESTful APIs, GraphQL, server-side logic |
-| [**Full-Stack Expert**](agents/fullstack/fullstack-expert.agent.md) | End-to-end feature implementation | Full-stack features, monorepo projects |
-| [**Mobile Developer**](agents/fullstack/mobile-developer.agent.md) | React Native, Flutter, native iOS/Android | Cross-platform mobile apps |
-| [**API Designer**](agents/fullstack/api-designer.agent.md) | RESTful principles, OpenAPI specs, versioning | API architecture, documentation |
-| [**Database Architect**](agents/fullstack/database-architect.agent.md) | Schema design, normalization, query optimization | Database modeling, performance tuning |
+### Language and Data Experts (7 agents)
 
-### Language Experts (6 agents)
+| Agent | Description |
+|-------|-------------|
+| [**python-expert**](agents/coding/python-expert.agent.md) | Python 3.12+, typing, packaging, pytest |
+| [**javascript-expert**](agents/coding/javascript-expert.agent.md) | Modern ES, TypeScript, Node.js |
+| [**rust-expert**](agents/coding/rust-expert.agent.md) | Ownership, borrowing, async |
+| [**go-expert**](agents/coding/go-expert.agent.md) | Concurrency patterns, error handling |
+| [**java-expert**](agents/coding/java-expert.agent.md) | Spring Boot, Maven/Gradle, JUnit |
+| [**sql-expert**](agents/coding/sql-expert.agent.md) | Vendor-neutral SQL, query tuning, migrations |
+| [**postgres-expert**](agents/coding/postgres-expert.agent.md) | PostgreSQL: EXPLAIN, indexes, partitioning, VACUUM, locks, RLS |
 
-Language-specific coding assistants with deep expertise.
+### Testing and Quality (5 agents)
 
-| Agent | Description | Use Cases |
-|-------|-------------|-----------|
-| [**Python Expert**](agents/coding/python-expert.agent.md) | Type hints, pytest, best practices | Data science, backend services, automation |
-| [**JavaScript Expert**](agents/coding/javascript-expert.agent.md) | Modern ES6+, React, Node.js | Web development, frontend/backend JS |
-| [**Rust Expert**](agents/coding/rust-expert.agent.md) | Memory safety, borrowing, async/await | Systems programming, performance-critical code |
-| [**Go Expert**](agents/coding/go-expert.agent.md) | Concurrency patterns, error handling | Microservices, cloud infrastructure |
-| [**Java Expert**](agents/coding/java-expert.agent.md) | Spring Boot, Maven/Gradle, JUnit | Enterprise applications, Android apps |
-| [**SQL Expert**](agents/coding/sql-expert.agent.md) | Query optimization, database design, migrations | Database development, data analysis |
+| Agent | Description |
+|-------|-------------|
+| [**e2e-tester**](agents/testing/e2e-tester.agent.md) | Playwright, Cypress, Selenium |
+| [**ab-test-ideas**](agents/testing/ab-test-ideas.agent.md) | Hypotheses and experiment design |
+| [**code-reviewer**](agents/testing/code-reviewer.agent.md) | Read-only pull request review |
+| [**security-auditor**](agents/testing/security-auditor.agent.md) | Read-only vulnerability review, OWASP |
+| [**test-generator**](agents/testing/test-generator.agent.md) | Unit and integration tests |
 
-### Testing & Quality (5 agents)
+### Design and UI/UX (4 agents)
 
-Ensure code quality, security, and comprehensive test coverage.
-
-| Agent | Description | Use Cases |
-|-------|-------------|-----------|
-| [**E2E Tester**](agents/testing/e2e-tester.agent.md) | Playwright, Cypress, Selenium automation | End-to-end test automation, UI testing |
-| [**A/B Test Ideas**](agents/testing/ab-test-ideas.agent.md) | Hypothesis generation, experiment design | Product experiments, feature testing |
-| [**Code Reviewer**](agents/testing/code-reviewer.agent.md) | Pull request reviews, best practices | Code review automation, quality gates |
-| [**Security Auditor**](agents/testing/security-auditor.agent.md) | Vulnerability scanning, OWASP compliance | Security audits, penetration testing |
-| [**Test Generator**](agents/testing/test-generator.agent.md) | Unit tests, integration tests, coverage | Test creation, TDD/BDD workflows |
-
-### Design & UI/UX (4 agents)
-
-From design to code, build beautiful user interfaces.
-
-| Agent | Description | Use Cases |
-|-------|-------------|-----------|
-| [**UI/UX Designer**](agents/design/uiux-designer.agent.md) | User flows, wireframing, design systems | Product design, user research |
-| [**Figma to HTML**](agents/design/figma-to-html.agent.md) | Convert Figma designs to HTML/CSS/React | Design-to-code workflows |
-| [**Responsive Design**](agents/design/responsive-design.agent.md) | Mobile-first, accessibility, cross-browser | Responsive web development |
-| [**Design System Builder**](agents/design/design-system.agent.md) | Component libraries, design tokens | Building/maintaining design systems |
+| Agent | Description |
+|-------|-------------|
+| [**uiux-designer**](agents/design/uiux-designer.agent.md) | User flows, wireframes, design review |
+| [**figma-to-html**](agents/design/figma-to-html.agent.md) | Turns screenshots and exports (or a Figma MCP, if configured) into HTML/CSS/React |
+| [**responsive-design**](agents/design/responsive-design.agent.md) | Mobile-first layout, accessibility |
+| [**design-system**](agents/design/design-system.agent.md) | Component libraries, design tokens |
 
 ### Productivity (4 agents)
 
-Plan, research, and document your projects effectively.
-
-| Agent | Description | Use Cases |
-|-------|-------------|-----------|
-| [**Enhanced Planner**](agents/productivity/enhanced-planner.agent.md) | Multi-step planning with dependency tracking | Project planning, task breakdown |
-| [**Research Agent**](agents/productivity/research-agent.agent.md) | Web research, documentation synthesis | Technical research, competitive analysis |
-| [**Task Breakdown**](agents/productivity/task-breakdown.agent.md) | Epic decomposition, story estimation | Agile planning, sprint preparation |
-| [**Doc Generator**](agents/productivity/doc-generator.agent.md) | README, API docs, architecture diagrams | Documentation automation |
+| Agent | Description |
+|-------|-------------|
+| [**enhanced-planner**](agents/productivity/enhanced-planner.agent.md) | Multi-step plans with dependencies |
+| [**research-agent**](agents/productivity/research-agent.agent.md) | Read-only web research and synthesis |
+| [**task-breakdown**](agents/productivity/task-breakdown.agent.md) | Epic decomposition and estimation |
+| [**doc-generator**](agents/productivity/doc-generator.agent.md) | READMEs, API docs, diagrams |
 
 ### DevOps (4 agents)
 
-Infrastructure, containers, and CI/CD automation.
+| Agent | Description |
+|-------|-------------|
+| [**docker-expert**](agents/devops/docker-expert.agent.md) | Dockerfiles, multi-stage builds |
+| [**kubernetes-expert**](agents/devops/kubernetes-expert.agent.md) | Manifests, Helm, troubleshooting |
+| [**cicd-expert**](agents/devops/cicd-expert.agent.md) | GitHub Actions, GitLab CI, Azure DevOps |
+| [**terraform-expert**](agents/devops/terraform-expert.agent.md) | Infrastructure as code, state |
 
-| Agent | Description | Use Cases |
-|-------|-------------|-----------|
-| [**Docker Expert**](agents/devops/docker-expert.agent.md) | Dockerfile optimization, multi-stage builds | Container development, optimization |
-| [**Kubernetes Expert**](agents/devops/kubernetes-expert.agent.md) | Manifests, Helm charts, troubleshooting | K8s deployment, cluster management |
-| [**CI/CD Expert**](agents/devops/cicd-expert.agent.md) | GitHub Actions, GitLab CI, Azure DevOps | Pipeline automation, deployment |
-| [**Terraform Expert**](agents/devops/terraform-expert.agent.md) | Infrastructure as code, state management | Cloud infrastructure, IaC |
+### Automation (1 agent)
+
+| Agent | Description |
+|-------|-------------|
+| [**n8n-expert**](agents/automation/n8n-expert.agent.md) | Builds and validates n8n workflows and agents through the `n8n` MCP server |
 
 ### Debugging (3 agents)
 
-Debug issues, optimize performance, and modernize legacy code.
-
-| Agent | Description | Use Cases |
-|-------|-------------|-----------|
-| [**Debug Detective**](agents/debugging/debug-detective.agent.md) | Error analysis, stack trace interpretation | Debugging, root cause analysis |
-| [**Performance Optimizer**](agents/debugging/performance-optimizer.agent.md) | Profiling, bottleneck identification | Performance tuning, optimization |
-| [**Legacy Modernizer**](agents/debugging/legacy-modernizer.agent.md) | Migration strategies, tech debt reduction | Legacy code refactoring, upgrades |
+| Agent | Description |
+|-------|-------------|
+| [**debug-detective**](agents/debugging/debug-detective.agent.md) | Read-only root-cause analysis |
+| [**performance-optimizer**](agents/debugging/performance-optimizer.agent.md) | Read-only profiling and bottleneck analysis |
+| [**legacy-modernizer**](agents/debugging/legacy-modernizer.agent.md) | Migration strategy, tech-debt reduction |
 
 ---
 
-## Usage Examples
-
-### Single Agent Workflow
+## Examples
 
 ```bash
-# Use the Python Expert to refactor a function
-copilot agent run python-expert "Refactor this function to use type hints and improve error handling"
+# One specialist, headless
+claude --agent postgres-expert "Why is the orders report query slow? Use EXPLAIN (ANALYZE, BUFFERS)."
+
+# A coordinator that delegates to other agents
+claude --agent orchestrator "Add password reset: API endpoint, UI form, tests, security review"
 ```
 
-### Multi-Agent Orchestration
-
-```bash
-# Use the Orchestrator to coordinate multiple agents
-copilot agent run orchestrator "Build a new user authentication feature with frontend, backend, and tests"
-```
-
-The Orchestrator will delegate tasks to:
-1. **Backend Developer**  API endpoints and authentication logic
-2. **Frontend Developer**  Login/signup UI components
-3. **Security Auditor**  Security review
-4. **Test Generator**  Unit and integration tests
-
-### Design-to-Code Workflow
-
-```bash
-# Convert Figma design to React components
-copilot agent run figma-to-html "Convert this Figma design to React with TypeScript"
-```
+The orchestrator delegates with the `Agent` tool (backend-developer, frontend-developer, test-generator, security-auditor) and returns one summary.
 
 ---
 
 ## Documentation
 
-- **[Getting Started Guide](docs/getting-started.md)** - Installation and first agent usage
-- **[Agent Guide](docs/agent-guide.md)** - Detailed usage for each agent
-- **[CLI vs IDE](docs/cli-vs-ide.md)** - Platform-specific best practices
-- **[Orchestration Patterns](docs/orchestration-patterns.md)** - Multi-agent coordination
-- **[Best Practices](docs/best-practices.md)** - Advanced usage patterns
-- **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
-
----
-
-## Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- How to create a new agent
-- Submission guidelines
-- Quality standards
-- PR review process
-
----
+- [Getting Started](docs/getting-started.md): install and first run
+- [Invocation](docs/invocation.md): `@name` in a session vs `claude --agent` in scripts
+- [Agent Guide](docs/agent-guide.md): every agent, when to use it
+- [Orchestration Patterns](docs/orchestration-patterns.md): multi-agent work
+- [Best Practices](docs/best-practices.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Contributing](CONTRIBUTING.md) and [Testing](TESTING.md)
 
 ## License
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-## Showcase
-
-**Built something awesome with these agents?** Share your story!
-- Open a [GitHub Discussion](../../discussions)
-- Tweet with `#CopilotAgents`
-- Submit a PR to add your project to our showcase
-
----
+MIT, see [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-Inspired by [github/awesome-copilot](https://github.com/github/awesome-copilot) and the amazing Copilot community.
-
----
-
-<p align="center">Made with  by developers, for developers</p>
+Originally inspired by [github/awesome-copilot](https://github.com/github/awesome-copilot).

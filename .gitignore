@@ -69,3 +69,7 @@ build/
 # Generated content
 generated/
 output/
+
+# Local tool state, not part of the library
+.claude/
+.serena/

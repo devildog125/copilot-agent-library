@@ -1,82 +1,57 @@
 ---
-name: [Agent Name]
-description: [Brief one-line description of what this agent does]
-model: [Recommended model: claude-sonnet-4.5, gpt-4.1, etc.]
-tools: [List of tools this agent needs access to, e.g., 'read', 'write', 'search', 'web', 'bash', 'github/*']
-agents: [List of sub-agents this agent can delegate to, if any]
-handoffs:
-- label: [Handoff Button Label]
-  agent: [target-agent]
-  prompt: '[Instructions to pass to the target agent]'
-  send: true
+name: agent-name
+description: Use when [the situation in which Claude should delegate to this agent]. [One sentence on what it does.]
+model: sonnet
+tools: Read, Glob, Grep
 ---
 
-[Provide a comprehensive description of the agent's purpose, capabilities, and ideal use cases]
+<!--
+Frontmatter reference
+  name         Required. Lowercase slug; must equal the filename stem (agent-name.agent.md).
+  description  Required. Starts with "Use when ..." so Claude knows when to delegate.
+  model        opus | sonnet | haiku | fable | inherit
+  tools        Comma-separated: Read, Glob, Grep, Edit, Write, Bash, WebFetch, WebSearch,
+               TodoWrite, Agent, mcp__<server>. Omit Edit and Write for read-only agents.
+  Optional     effort (low|medium|high|xhigh|max), mcpServers, memory
+  Do not use   agents: or handoffs: (delegation is the Agent tool plus the Delegation section)
+-->
+
+[One paragraph: who this agent is and the jobs it is for.]
 
 ## Core Capabilities
 
-- [Key capability 1]
-- [Key capability 2]
-- [Key capability 3]
+- [Capability 1]
+- [Capability 2]
+- [Capability 3]
 
 ## Workflow
 
-[Describe the agent's typical workflow or process]
-
-1. [Step 1]
+1. [Step 1: inspect before changing]
 2. [Step 2]
-3. [Step 3]
-
-## Rules & Guidelines
+3. [Step 3: verify]
 
 <rules>
-- [Important rule or constraint 1]
-- [Important rule or constraint 2]
-- [Important rule or constraint 3]
+- [Constraint 1]
+- [Constraint 2]
+- Never put secrets in files or output; refer to environment variable names.
 </rules>
 
-## Usage Examples
+## Delegation
 
-### CLI Usage
+<!-- Keep only if `Agent` is in tools. Name each sub-agent and when to spawn it. -->
+
+- Spawn `test-generator` when [condition].
+
+## Report back
+
+Return a short summary to the caller: what changed, files touched, what was verified, and one recommended next step (for example, "run `security-auditor` on the auth changes"). Do not paste whole files.
+
+## Usage
+
+```
+@agent-name [example prompt]
+```
 
 ```bash
-# Example 1: [Describe what this does]
-copilot agent run [agent-name] "[Your prompt here]"
-
-# Example 2: [Describe what this does]
-copilot agent run [agent-name] "[Your prompt here]"
+claude --agent agent-name "[example prompt]"
 ```
-
-### IDE Usage (VS Code)
-
-```
-@[agent-name] [Your prompt here]
-```
-
-**Example scenarios:**
-- [Scenario 1]: `@[agent-name] [example prompt]`
-- [Scenario 2]: `@[agent-name] [example prompt]`
-
-## Integration Patterns
-
-[How this agent works with other agents or tools]
-
-### Works Well With
-- **[Other Agent Name]**: [How they complement each other]
-- **[MCP Server/Tool]**: [Integration details]
-
-### Common Workflows
-1. **[Workflow Name]**: [Agent A]  [This Agent]  [Agent B]
-2. **[Workflow Name]**: [Description of multi-step process]
-
-## Limitations
-
-- [Limitation 1]
-- [Limitation 2]
-- [Limitation 3]
-
-## Tips for Best Results
-
-- [Tip 1]
-- [Tip 2]
-- [Tip 3]

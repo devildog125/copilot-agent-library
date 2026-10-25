@@ -28,10 +28,11 @@ assignees: ''
 
 ## Environment
 
-- **Platform**: [ ] CLI [ ] VS Code [ ] Other IDE
-- **Model**: [e.g., claude-sonnet-4.5, gpt-4.1]
+- **Invocation**: [ ] `@name` in a session [ ] `claude --agent name` (headless)
+- **Install**: [ ] `~/.claude/agents/` [ ] `.claude/agents/` [ ] plugin
+- **Model**: [e.g., opus, sonnet; from the agent's frontmatter or your override]
+- **Claude Code version**: [output of `claude --version`]
 - **OS**: [e.g., macOS 14, Windows 11, Ubuntu 22.04]
-- **Copilot Version**: [if known]
 
 ## Additional Context
 

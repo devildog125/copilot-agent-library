@@ -12,11 +12,14 @@ Validates all agent files for proper formatting and structure.
 ```
 
 **Checks:**
-- File exists and is not empty
-- Has YAML frontmatter (starts with `---`)
-- Has required fields (`name:` and `description:`)
-- Has sufficient content
-- File size is reasonable
+- Frontmatter starts with `---`
+- `name:` equals the filename stem and matches `^[a-z0-9-]+$`
+- `description:` present
+- `model:` is `sonnet|opus|haiku|fable|inherit` or `claude-*`
+- Every `tools:` entry is a known Claude Code tool or `mcp__*`
+- `effort:` (if set) is `low|medium|high|xhigh|max`
+- No `agents:`/`handoffs:` keys and no "copilot" text
+- Has a `## Report back` heading
 
 **Exit Codes:**
 - `0` - All validations passed
@@ -53,17 +56,28 @@ Template for documenting test results when testing agents.
 
 ### Manual Testing
 ```bash
-# CLI - Test a specific agent
-gh copilot agent run orchestrator "Build a simple REST API"
+# Run an agent as the main session
+claude --agent orchestrator "Build a simple REST API"
 
-# VS Code - Test in IDE
-# 1. Copy agents to .github/agents/ in workspace
-# 2. Open Copilot Chat
-# 3. Type: @orchestrator Build a simple REST API
+# Or inside a session: list agents with /agents, then
+# @python-expert refactor utils.py
 ```
 
 ### Full Test Suite
 Follow the scenarios in `TESTING.md` for comprehensive testing.
+
+---
+
+## Install locally (plugin)
+
+`.claude-plugin/plugin.json` makes this repo a Claude Code plugin; `agents/` is picked up by default.
+
+```bash
+claude --plugin-dir .          # load for one session, then run /agents
+claude plugin validate .       # check the manifest
+```
+
+No plugin? Copy instead: `cp -r agents/* ~/.claude/agents/`.
 
 ---
 

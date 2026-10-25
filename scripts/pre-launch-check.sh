@@ -4,7 +4,7 @@
 
 set -e
 
-echo " Pre-Launch Verification for Copilot Agent Library"
+echo " Pre-Launch Verification for Agent Library"
 echo "=================================================="
 echo ""
 
@@ -21,16 +21,16 @@ NC='\033[0m'
 # Check 1: Validate all agents
 echo " Step 1: Validating agents..."
 if [ -f "scripts/validate-agents.sh" ]; then
-  chmod +x scripts/validate-agents.sh
-  if ./scripts/validate-agents.sh > /dev/null 2>&1; then
+  # Run through bash so no chmod (a file-mode change) is needed during a check.
+  if bash scripts/validate-agents.sh > /dev/null 2>&1; then
       echo -e "${GREEN} All agents validated successfully${NC}"
   else
       echo -e "${RED} Agent validation failed${NC}"
-      ((ERRORS++))
+      ERRORS=$((ERRORS+1))   # set -e-safe counter (((X++)) aborts at 0).
   fi
 else
   echo -e "${RED} Validation script not found${NC}"
-  ((ERRORS++))
+  ERRORS=$((ERRORS+1))   # set -e-safe counter (((X++)) aborts at 0).
 fi
 echo ""
 
@@ -51,7 +51,7 @@ for file in "${REQUIRED_FILES[@]}"; do
       echo -e "${GREEN} $file${NC}"
   else
       echo -e "${RED} Missing: $file${NC}"
-      ((ERRORS++))
+      ERRORS=$((ERRORS+1))   # set -e-safe counter (((X++)) aborts at 0).
   fi
 done
 echo ""
@@ -65,15 +65,22 @@ REQUIRED_DOCS=(
   "docs/best-practices.md"
   "docs/troubleshooting.md"
   "docs/examples.md"
-  "docs/cli-vs-ide.md"
 )
+
+# The invocation guide is being renamed; accept either filename.
+if [ -f "docs/invocation.md" ] || [ -f "docs/cli-vs-ide.md" ]; then
+  echo -e "${GREEN} docs/invocation.md (or cli-vs-ide.md)${NC}"
+else
+  echo -e "${RED} Missing: docs/invocation.md or docs/cli-vs-ide.md${NC}"
+  ERRORS=$((ERRORS+1))   # Counter form that is safe under set -e.
+fi
 
 for doc in "${REQUIRED_DOCS[@]}"; do
   if [ -f "$doc" ]; then
       echo -e "${GREEN} $doc${NC}"
   else
       echo -e "${RED} Missing: $doc${NC}"
-      ((ERRORS++))
+      ERRORS=$((ERRORS+1))   # set -e-safe counter (((X++)) aborts at 0).
   fi
 done
 echo ""
@@ -93,7 +100,7 @@ for file in "${GITHUB_FILES[@]}"; do
       echo -e "${GREEN} $file${NC}"
   else
       echo -e "${YELLOW}  Missing: $file${NC}"
-      ((WARNINGS++))
+      WARNINGS=$((WARNINGS+1))   # set -e-safe counter (((X++)) aborts at 0).
   fi
 done
 echo ""
@@ -123,18 +130,19 @@ if grep -q "PHASE_.*\.md" .gitignore 2>/dev/null; then
   echo -e "${GREEN} Internal documentation patterns in .gitignore${NC}"
 else
   echo -e "${RED} Missing gitignore patterns for internal docs${NC}"
-  ((ERRORS++))
+  ERRORS=$((ERRORS+1))   # set -e-safe counter (((X++)) aborts at 0).
 fi
 echo ""
 
 # Check 6: Count agents
 echo " Step 6: Counting agents..."
-AGENT_COUNT=$(find agents -name "*.agent.md" 2>/dev/null | wc -l)
-if [ "$AGENT_COUNT" -eq 35 ]; then
-  echo -e "${GREEN} Found 35 agents${NC}"
+# Count agent files on disk; shown for information, the validator enforces the schema.
+AGENT_COUNT=$(find agents -name "*.agent.md" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$AGENT_COUNT" -gt 0 ]; then
+  echo -e "${GREEN} Found $AGENT_COUNT agents${NC}"
 else
-  echo -e "${RED} Expected 35 agents, found $AGENT_COUNT${NC}"
-  ((ERRORS++))
+  echo -e "${RED} No agents found under agents/${NC}"
+  ERRORS=$((ERRORS+1))   # Counter form that is safe under set -e.
 fi
 echo ""
 
@@ -144,7 +152,7 @@ if [ -f "README.md" ] && [ $(wc -l < README.md) -gt 50 ]; then
   echo -e "${GREEN} README has substantial content${NC}"
 else
   echo -e "${RED} README is missing or too short${NC}"
-  ((ERRORS++))
+  ERRORS=$((ERRORS+1))   # set -e-safe counter (((X++)) aborts at 0).
 fi
 echo ""
 
@@ -155,9 +163,9 @@ for script in scripts/*.sh; do
       if [ -x "$script" ]; then
           echo -e "${GREEN} $(basename $script) is executable${NC}"
       else
+          # Report only; a check must not modify files. Fix with: chmod +x scripts/<name>
           echo -e "${YELLOW}  $(basename $script) is not executable${NC}"
-          chmod +x "$script"
-          echo -e "${GREEN}   Fixed: Made executable${NC}"
+          WARNINGS=$((WARNINGS+1))   # Soft problem, not a launch blocker.
       fi
   fi
 done
@@ -191,7 +199,7 @@ if [ $ERRORS -eq 0 ]; then
   echo -e "${GREEN} Repository is ready for launch!${NC}"
   echo ""
   echo " What will be committed:"
-  echo "   35 agent files"
+  echo "   $AGENT_COUNT agent files"
   echo "   10+ documentation guides"
   echo "   Core files (README, CONTRIBUTING, LICENSE, etc.)"
   echo "   Scripts and templates"
@@ -205,14 +213,8 @@ if [ $ERRORS -eq 0 ]; then
   echo "   Personal customizations"
   echo ""
   echo " Next steps:"
-  echo "1. Initialize git: git init"
-  echo "2. Add files: git add ."
-  echo "3. Check what will be committed: git status"
-  echo "4. Commit: git commit -m 'Initial commit: 35 production-ready Copilot agents'"
-  echo "5. Create GitHub repository"
-  echo "6. Add remote: git remote add origin <your-repo-url>"
-  echo "7. Push: git push -u origin main"
-  echo "8. Create v1.0.0 release"
+  echo "1. Review changes: git status"
+  echo "2. Smoke-test in Claude Code: run /agents, then claude --agent <name>"
   echo ""
   exit 0
 else

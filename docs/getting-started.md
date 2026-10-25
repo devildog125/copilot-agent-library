@@ -1,266 +1,117 @@
-# Getting Started with Copilot Agent Library
+# Getting Started
 
-Welcome! This guide will help you install and start using custom Copilot agents from our library.
+Install a few agents and run your first task.
 
-## What are Copilot Agents?
+## What is a sub-agent?
 
-Copilot agents are specialized AI assistants that you can invoke in the GitHub Copilot CLI or IDE to perform specific tasks. Think of them as expert consultants you can call upon - a Python Expert for Python code, a Security Auditor for security reviews, or an Orchestrator to coordinate multiple agents for complex projects.
+A Claude Code sub-agent is a Markdown file with YAML frontmatter and a system prompt. Claude delegates to it when the task matches its `description`, or you call it by name. It works in its own context window and returns one summary to the caller.
 
-## Installation
+## Prerequisites
 
-### Prerequisites
+- [Claude Code](https://code.claude.com) installed and signed in (`claude --version` works)
+- This repository cloned locally
 
-- **GitHub Copilot** subscription (Individual, Business, or Enterprise)
-- **GitHub Copilot CLI** installed OR **VS Code with GitHub Copilot extension**
+## Install
 
-### For CLI Users
+Pick one route.
 
-1. **Choose an agent** from the [README](../README.md) agent catalog
-
-2. **Download the agent file** (click the agent link, then download the `.agent.md` file)
-
-3. **Copy to your agents directory**:
- ```bash
- # Create agents directory if it doesn't exist
- mkdir -p ~/.github/agents
-   
- # Copy the downloaded agent
- cp ~/Downloads/orchestrator.agent.md ~/.github/agents/
- ```
-
-4. **Verify installation**:
- ```bash
- copilot agent list
- ```
-   
- You should see your installed agent in the list.
-
-5. **Use the agent**:
- ```bash
- copilot agent run orchestrator "Your task here"
- ```
-
-### For IDE Users (VS Code)
-
-1. **Choose an agent** from the [README](../README.md) agent catalog
-
-2. **Download the agent file**
-
-3. **Add to your workspace**:
- ```bash
- # Create agents directory in your project
- mkdir -p .github/agents
-   
- # Copy the agent
- cp ~/Downloads/orchestrator.agent.md .github/agents/
- ```
-
-4. **Reload VS Code** (or restart the Copilot extension)
-
-5. **Use the agent in chat**:
- - Open GitHub Copilot chat (`Ctrl+Shift+I` or `Cmd+Shift+I`)
- - Type: `@orchestrator Your task here`
-
-## Your First Agent
-
-Let's try the **Python Expert** agent:
-
-### Step 1: Install the Agent
+### 1. All projects (user scope)
 
 ```bash
-# CLI users
-cp agents/coding/python-expert.agent.md ~/.github/agents/
-
-# VS Code users  
-cp agents/coding/python-expert.agent.md .github/agents/
+mkdir -p ~/.claude/agents
+cp agents/*/*.agent.md ~/.claude/agents/
 ```
 
-### Step 2: Use the Agent
-
-**CLI:**
-```bash
-copilot agent run python-expert "Create a function to parse CSV files with type hints and error handling"
-```
-
-**VS Code:**
-```
-@python-expert Create a function to parse CSV files with type hints and error handling
-```
-
-### Step 3: Review the Output
-
-The agent will generate type-annotated Python code following best practices:
-- Type hints on all functions
-- Proper error handling
-- Docstrings
-- Example usage
-
-## Installing Multiple Agents
-
-You can install as many agents as you need:
+### 2. One project
 
 ```bash
-# Install a full-stack development set
-cp agents/fullstack/frontend-developer.agent.md ~/.github/agents/
-cp agents/fullstack/backend-developer.agent.md ~/.github/agents/
-cp agents/fullstack/database-architect.agent.md ~/.github/agents/
-
-# Install testing agents
-cp agents/testing/test-generator.agent.md ~/.github/agents/
-cp agents/testing/e2e-tester.agent.md ~/.github/agents/
-
-# Install the orchestrator to coordinate them all
-cp agents/orchestration/orchestrator.agent.md ~/.github/agents/
+mkdir -p .claude/agents
+cp agents/coding/python-expert.agent.md .claude/agents/
 ```
 
-## Understanding Agent Capabilities
+Commit `.claude/agents/` and your team gets the same agents.
 
-Each agent specifies its capabilities in the frontmatter:
+### 3. Plugin
+
+The repo ships a plugin manifest (`.claude-plugin/plugin.json`, plugin name `agent-library`):
+
+```bash
+claude --plugin-dir /path/to/this/repo
+```
+
+The marketplace route (`/plugin marketplace add <owner>/<repo>`, then `/plugin install agent-library@<marketplace>`) needs a `.claude-plugin/marketplace.json`, which this repo does not have yet.
+
+### Verify
+
+Start `claude` and run:
+
+```
+/agents
+```
+
+You should see the installed agents. Claude Code reads agent files at session start, so restart the session after copying new files.
+
+## Your first agent
+
+1. Install `python-expert` (route 2 above).
+2. In a session, ask for something it owns:
+
+   ```
+   @python-expert write a function that parses a CSV file, with type hints and error handling
+   ```
+
+3. Or run it headless:
+
+   ```bash
+   claude --agent python-expert "Write a function that parses a CSV file, with type hints and error handling"
+   ```
+
+4. Read the summary it returns: what changed, files touched, what was verified, and a suggested next step.
+
+## Frontmatter
+
+Each agent starts with this block:
 
 ```yaml
 ---
-name: Python Expert
-description: Python specialist with type hints, pytest, and best practices
-model: claude-sonnet-4.5
-tools: ['read', 'write', 'bash', 'search']
-agents: ['test-generator']
+name: python-expert
+description: Use for Python implementation, refactors, typing, packaging and pytest work.
+model: opus
+tools: Read, Glob, Grep, Edit, Write, Bash, Agent
 ---
 ```
 
-**Key fields:**
-- **name**: How to invoke the agent
-- **description**: What the agent does
-- **model**: Recommended AI model
-- **tools**: What tools the agent can access (file operations, web search, etc.)
-- **agents**: Which sub-agents this agent can delegate to
+- **name**: lowercase slug, equal to the filename stem. This is what `@name` and `--agent name` resolve.
+- **description**: starts with "Use when ...". Claude reads it to decide when to delegate.
+- **model**: `opus`, `sonnet`, `haiku`, `fable` or `inherit` (use the caller's model).
+- **tools**: comma-separated Claude tool names: `Read, Glob, Grep, Edit, Write, Bash, WebFetch, WebSearch, TodoWrite, Agent`, or `mcp__<server>`. Read-only agents omit `Edit` and `Write`. Listing `Agent` lets the agent spawn other agents.
+- **Optional**: `effort` (`low` to `max`), `mcpServers`, `memory`.
 
-## Common Use Cases
-
-### Single Agent Tasks
-
-Use one agent for focused tasks:
+## Install several agents
 
 ```bash
-# Code review
-copilot agent run code-reviewer "Review this pull request for quality issues"
-
-# Design conversion
-copilot agent run figma-to-html "Convert this Figma design to React components"
-
-# Performance optimization
-copilot agent run performance-optimizer "This API endpoint is slow, help optimize it"
+cp agents/fullstack/{frontend,backend}-developer.agent.md ~/.claude/agents/
+cp agents/testing/{test-generator,code-reviewer}.agent.md ~/.claude/agents/
+cp agents/orchestration/orchestrator.agent.md ~/.claude/agents/
 ```
 
-### Multi-Agent Workflows
+The orchestrator can only delegate to agents that are installed.
 
-Use the Orchestrator for complex tasks requiring multiple specialists:
+## Tips
 
-```bash
-copilot agent run orchestrator "Build a user authentication feature with:
-- React frontend with login/signup forms
-- Node.js backend with JWT authentication
-- PostgreSQL database schema
-- Comprehensive tests
-- Security review"
-```
-
-The Orchestrator will:
-1. Break down the task
-2. Delegate to appropriate specialists (Frontend Dev, Backend Dev, Database Architect, Test Generator, Security Auditor)
-3. Coordinate the work
-4. Ensure everything integrates
-
-## Tips for Success
-
-### 1. Be Specific
-
- **Too vague:**
-```bash
-copilot agent run backend-developer "Build an API"
-```
-
- **Better:**
-```bash
-copilot agent run backend-developer "Build a RESTful API for a blog platform with:
-- Posts (CRUD operations)
-- Comments on posts
-- User authentication with JWT
-- PostgreSQL database
-- Express.js framework"
-```
-
-### 2. Provide Context
-
-Include relevant information:
-- Technology stack preferences
-- Existing patterns to follow
-- Constraints or requirements
-- Target users or use cases
-
-### 3. Use the Right Agent
-
-- **Broad tasks**  Use **Orchestrator** to coordinate specialists
-- **Focused tasks**  Use specific agents (Python Expert, Frontend Developer, etc.)
-- **Research needed**  Start with **Research Agent**
-- **Planning needed**  Start with **Enhanced Planner**
-
-### 4. Iterate
-
-Agents can refine their work:
-
-```bash
-# First request
-copilot agent run frontend-developer "Create a user profile component"
-
-# Follow-up refinement
-copilot agent run frontend-developer "Add form validation and loading states to the profile component"
-```
+1. **Be specific.** Name the file, the behaviour and the constraint.
+2. **Pick the narrowest agent.** `postgres-expert` for a Postgres query, `sql-expert` for vendor-neutral SQL.
+3. **Iterate.** Reply in the session; the agent keeps its context until it finishes.
+4. **Use the orchestrator for 3+ specialists.** For one specialist, call it directly.
 
 ## Troubleshooting
 
-### Agent Not Found
+- **Agent not listed in `/agents`**: wrong directory, filename not ending in `.md`, or session started before the copy. Restart the session.
+- **`@name` does nothing**: `name:` must equal the filename stem and be a lowercase slug.
+- **More:** [Troubleshooting](troubleshooting.md).
 
-**Problem:** `Agent 'orchestrator' not found`
+## Next steps
 
-**Solution:** 
-- Verify the agent file is in `~/.github/agents/` (CLI) or `.github/agents/` (VS Code)
-- Check the filename matches: `orchestrator.agent.md`
-- Restart Copilot CLI or reload VS Code
-
-### Agent Not Responding
-
-**Problem:** Agent starts but doesn't complete
-
-**Solution:**
-- Check your internet connection
-- Verify your Copilot subscription is active
-- Try a simpler prompt first
-- Check if the model specified in the agent is available
-
-### Unexpected Output
-
-**Problem:** Agent's output doesn't match expectations
-
-**Solution:**
-- Review the agent's capabilities and limitations in its file
-- Provide more specific instructions
-- Try a different agent more suited to the task
-- Break the task into smaller steps
-
-## Next Steps
-
-- **[Agent Guide](./agent-guide.md)** - Detailed guide for each agent
-- **[CLI vs IDE](./cli-vs-ide.md)** - Platform-specific tips
-- **[Orchestration Patterns](./orchestration-patterns.md)** - Multi-agent workflows
-- **[Best Practices](./best-practices.md)** - Advanced usage patterns
-
-## Need Help?
-
-- Check the [Troubleshooting Guide](./troubleshooting.md)
-- Review [agent-specific documentation](./agent-guide.md)
-- Open a [GitHub Discussion](../../discussions)
-- Report bugs via [GitHub Issues](../../issues)
-
----
-
-**Ready to dive deeper?** Continue to the [Agent Guide](./agent-guide.md) to learn about each agent's capabilities in detail.
+- [Invocation](invocation.md): `@name` vs `claude --agent`
+- [Agent Guide](agent-guide.md): all 37 agents
+- [Orchestration Patterns](orchestration-patterns.md)

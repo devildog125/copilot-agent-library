@@ -1,477 +1,114 @@
-# Orchestration Patterns: Multi-Agent Coordination
+# Orchestration Patterns
 
-Learn how to use multiple agents together to solve complex problems efficiently. The key is understanding when to use single agents vs. the Orchestrator, and how to design effective multi-agent workflows.
+How to combine agents. A sub-agent works in its own context and returns one summary; coordination happens through the `Agent` tool.
 
-## When to Use Multiple Agents
+## Single agent or orchestrator?
 
-### Use Single Agent When:
-- Task is focused and within one domain
-- You need a specialist's deep expertise
-- Task is straightforward (review code, write tests, optimize query)
+Use **one agent** when the task sits in one domain: a review, a query, a Dockerfile.
 
-### Use Orchestrator When:
-- Task spans multiple domains (frontend + backend + database)
-- Task requires sequential work from different specialists
-- You want automatic coordination and integration
-- Project is complex with many moving parts
+Use the **orchestrator** when the task spans domains (UI, API, database, tests) or needs several specialists in a set order.
 
-## Core Orchestration Patterns
+## How delegation works
 
-### Pattern 1: Sequential Handoff
-
-Tasks that must happen in order, where each agent depends on previous work.
-
-**Example: API Development**
+- An agent can spawn other agents only if `Agent` is in its `tools`.
+- Sub-agents can spawn sub-agents, up to three levels deep.
+- The caller sees only the sub-agent's final summary, so each agent's **Report back** section matters.
+- `orchestrator` and `workflow-manager` use `model: inherit` and are meant to run as the main thread:
 
 ```bash
-copilot agent run orchestrator "Build a REST API for a task management system"
+claude --agent orchestrator "Build a task-management REST API with tests"
 ```
 
-**Flow:**
+or inside a session: `@orchestrator Build a task-management REST API with tests`.
+
+All specialists must be installed (`/agents` shows them).
+
+## Patterns
+
+### 1. Sequential
+
+Each step needs the previous result.
+
 ```
-Orchestrator
-    
-1. API Designer (design endpoints and schemas)
-    
-2. Database Architect (create schema based on API design)
-    
-3. Backend Developer (implement API with database)
-    
-4. Security Auditor (review for vulnerabilities)
-    
-5. Test Generator (create API tests)
+orchestrator
+  1. api-designer       -> endpoints and schemas
+  2. database-architect -> schema from the design
+  3. backend-developer  -> implementation
+  4. security-auditor   -> review
+  5. test-generator     -> tests
 ```
 
-**Why Sequential:** Each step builds on the previous. Can't implement the API without the design, can't test without implementation.
+### 2. Parallel
 
-### Pattern 2: Parallel Execution
+Independent work runs at once; the coordinator merges the summaries.
 
-Independent tasks that can happen simultaneously.
+```
+orchestrator
+  |- frontend-developer  (UI)
+  |- backend-developer   (API)
+  |- doc-generator       (docs)
+```
 
-**Example: Full-Stack Feature**
+Only parallelise tasks that touch different files.
+
+### 3. Hub and spoke
+
+One coordinator, specialists never talk to each other. The hub passes the relevant part of one summary into the next prompt. This is the default `orchestrator` shape.
+
+### 4. Iterative refinement
+
+```
+backend-developer -> code-reviewer -> backend-developer -> code-reviewer
+```
+
+Stop when the reviewer reports no blocking findings. Cap it at three rounds.
+
+### 5. Validation gate
+
+Read-only agents act as gates after the build: `code-reviewer`, `security-auditor`, `performance-optimizer`. They cannot edit, so they cannot hide a problem by "fixing" it.
+
+## Examples
+
+### Checkout flow
 
 ```bash
-copilot agent run orchestrator "Build a user profile feature with avatar upload, bio editing, and activity timeline"
+claude --agent orchestrator "Add checkout: cart API, payment form UI, order table, and tests. Payments must go through the existing provider SDK; no card data stored."
 ```
 
-**Flow:**
-```
-Orchestrator
-    
-  > Frontend Developer (UI components) 
-  > Backend Developer (API endpoints) 
-  > Database Architect (user schema) 
-  > Doc Generator (API documentation) 
-                                               
-                                        Integration
-```
+Expected delegation: api-designer, database-architect, backend-developer, frontend-developer, test-generator, security-auditor.
 
-**Why Parallel:** Frontend, backend, and database work can start simultaneously since the interfaces (API contracts) are defined upfront.
-
-### Pattern 3: Hub and Spoke
-
-Orchestrator coordinates multiple specialists who work independently then integrate.
-
-**Example: Microservice Creation**
+### Migration
 
 ```bash
-copilot agent run orchestrator "Create a payment processing microservice with API, database, tests, and deployment configuration"
+claude --agent orchestrator "Plan and start migrating the jQuery admin pages to React, one page at a time"
 ```
 
-**Flow:**
-```
-                  Orchestrator
-                         
-        
-                                        
- Backend Dev      Docker Expert    Test Generator
- (service logic)  (containerize)   (unit tests)
-                                        
-        
-                         
-                  Integration
-```
+Expected delegation: legacy-modernizer (plan), enhanced-planner (phases), frontend-developer (first page), test-generator (parallel tests).
 
-### Pattern 4: Iterative Refinement
+### Greenfield
 
-Agents work in cycles, improving the output each iteration.
+Run phases separately and review between them:
 
-**Example: Design-to-Production Pipeline**
+1. `@enhanced-planner` produce the plan.
+2. `@api-designer` and `@database-architect` produce the contracts.
+3. `@orchestrator` implement against those contracts.
 
-```bash
-copilot agent run orchestrator "Implement this design with optimization and accessibility"
-```
+## Passing context
 
-**Flow:**
-```
-1. Figma-to-HTML (convert design)
-    
-2. Responsive Design (make mobile-friendly)
-    
-3. Frontend Developer (add interactivity)
-    
-4. Performance Optimizer (optimize bundle)
-    
-5. Code Reviewer (final review)
-```
+- Repeat the shared contract (API shapes, naming) in the prompt; sub-agents do not see your session.
+- State integration points: "the frontend calls `POST /api/orders` and expects `{id, status}`".
+- Ask for file paths in each summary so the next agent can find the work.
 
-### Pattern 5: Validation Pipeline
+## Practical advice
 
-Each agent validates or enhances the previous agent's work.
+1. Start with clear requirements and constraints.
+2. Break large projects into phases and review between them.
+3. Give an example of the style you want.
+4. If agents disagree, settle the contract first and rerun the later steps.
+5. Keep secrets out of prompts; refer to environment variable names.
 
-**Example: Secure Feature Development**
+## Next steps
 
-```
-Backend Developer (implement feature)
-    
-Security Auditor (identify vulnerabilities)
-    
-Backend Developer (fix security issues)
-    
-Test Generator (add security tests)
-    
-Code Reviewer (final validation)
-```
-
-## Real-World Orchestration Examples
-
-### Example 1: E-Commerce Checkout Flow
-
-**Goal:** Build complete checkout functionality
-
-```bash
-copilot agent run orchestrator "Build an e-commerce checkout flow with:
-- Product cart with add/remove items
-- Shipping address form
-- Payment integration (Stripe)
-- Order confirmation
-- Email notifications"
-```
-
-**Orchestration Plan:**
-
-**Phase 1: Architecture (Parallel)**
-```
-Database Architect: Design schema (carts, orders, products, users)
-API Designer: Define checkout API endpoints
-Frontend Designer: Sketch checkout user flow
-```
-
-**Phase 2: Implementation (Sequential Dependencies)**
-```
-Backend Developer: Implement cart and checkout APIs
-    
-Frontend Developer: Build cart and checkout UI
-    
-Full-Stack Expert: Integrate Stripe payment
-```
-
-**Phase 3: Quality (Parallel)**
-```
-E2E Tester: Create checkout flow tests
-Security Auditor: Review payment handling
-Performance Optimizer: Optimize checkout speed
-```
-
-**Phase 4: Deployment**
-```
-Docker Expert: Containerize application
-CI/CD Expert: Set up deployment pipeline
-```
-
-### Example 2: Migration Project
-
-**Goal:** Migrate from AngularJS to React
-
-```bash
-copilot agent run orchestrator "Plan and execute migration from AngularJS to React while maintaining feature parity"
-```
-
-**Orchestration Plan:**
-
-**Phase 1: Assessment**
-```
-Legacy Modernizer: Analyze current codebase
-Research Agent: Research migration strategies
-Enhanced Planner: Create migration roadmap
-```
-
-**Phase 2: Foundation (Sequential)**
-```
-Frontend Developer: Set up React infrastructure
-    
-Database Architect: Ensure DB compatibility
-    
-API Designer: Document existing APIs
-```
-
-**Phase 3: Incremental Migration (Iterative)**
-```
-For each feature:
-  Frontend Developer: Rewrite in React
-        
-  Test Generator: Create tests
-        
-  E2E Tester: Validate feature parity
-        
-  Deploy (feature flag enabled)
-```
-
-**Phase 4: Cutover**
-```
-Performance Optimizer: Compare old vs new performance
-Code Reviewer: Final code review
-Legacy Modernizer: Remove old AngularJS code
-```
-
-### Example 3: Greenfield Application
-
-**Goal:** Build a SaaS product from scratch
-
-```bash
-copilot agent run orchestrator "Build a project management SaaS with:
-- User authentication
-- Project and task management
-- Team collaboration
-- Real-time updates
-- Mobile app"
-```
-
-**Orchestration Plan:**
-
-**Sprint 1: Foundation**
-```
-Enhanced Planner: Create product roadmap
-    
-Database Architect: Design core schema
-    
-API Designer: Design REST/GraphQL API
-```
-
-**Sprint 2: Authentication (Parallel  Sequential)**
-```
-Parallel:
-  Backend Developer: Auth service
-  Frontend Developer: Auth UI
-  Mobile Developer: Auth screens
-    
-Security Auditor: Security review
-    
-Test Generator: Auth tests
-```
-
-**Sprint 3: Core Features**
-```
-For each feature (projects, tasks, teams):
-  Full-Stack Expert: Implement feature
-        
-  Test Generator: Feature tests
-        
-  Code Reviewer: Review
-```
-
-**Sprint 4: Real-Time & Polish**
-```
-Backend Developer: WebSocket service
-    
-Frontend Developer: Real-time UI updates
-    
-Mobile Developer: Push notifications
-    
-Performance Optimizer: Optimize all layers
-```
-
-## Agent Communication Patterns
-
-### Pattern: Context Preservation
-
-When passing work between agents, preserve context:
-
-```
-Orchestrator  Frontend Developer:
-"Build the user dashboard. Use the API endpoints defined by the API Designer: 
-- GET /api/user/stats
-- GET /api/user/activity
-The database schema uses UUID for user IDs."
-```
-
-### Pattern: Explicit Integration Points
-
-Define clear handoff points:
-
-```
-1. Database Architect creates schema 
-  Provides: Table structures, relationships, indexes
-   
-2. Backend Developer receives:
-  Input: Database schema
-  Output: API endpoints, ORM models
-   
-3. Frontend Developer receives:
-  Input: API endpoint contracts
-  Output: UI components, state management
-```
-
-### Pattern: Feedback Loops
-
-Agents review each other's work:
-
-```
-Backend Developer  Code Reviewer:
-  Code Reviewer finds issue
-        
-Backend Developer  Fix issue
-        
-Security Auditor  Validate fix
-```
-
-## Advanced Orchestration
-
-### Custom Agent Chains
-
-Create your own multi-agent workflows:
-
-**Research  Design  Implement  Test**
-```bash
-# Step 1: Research
-copilot agent run research-agent "Research best practices for real-time chat apps"
-
-# Step 2: Design (using research findings)
-copilot agent run api-designer "Design WebSocket API for real-time chat based on research"
-
-# Step 3: Implement
-copilot agent run backend-developer "Implement WebSocket chat API per design"
-
-# Step 4: Test
-copilot agent run e2e-tester "Create tests for real-time chat functionality"
-```
-
-### Conditional Workflows
-
-Different paths based on requirements:
-
-```
-If (new feature):
-  Frontend Developer  Test Generator
-    
-If (bug fix):
-  Debug Detective  Backend Developer  Test Generator
-    
-If (performance issue):
-  Performance Optimizer  Code Reviewer
-```
-
-### Hybrid Orchestration
-
-Mix orchestrated and manual steps:
-
-```bash
-# Auto: Initial implementation
-copilot agent run orchestrator "Build REST API for blog platform"
-
-# Manual: You review and test
-
-# Auto: Iterate based on feedback
-copilot agent run backend-developer "Add pagination to blog posts endpoint"
-copilot agent run test-generator "Add tests for pagination"
-```
-
-## Best Practices
-
-### 1. Start with Clear Requirements
-
- Bad:
-```bash
-copilot agent run orchestrator "Build something for users"
-```
-
- Good:
-```bash
-copilot agent run orchestrator "Build a user authentication system with:
-- Email/password login
-- JWT tokens
-- Password reset flow
-- Rate limiting
-- PostgreSQL storage"
-```
-
-### 2. Let Orchestrator Decide
-
-Trust the orchestrator to choose agents and sequencing:
-
- Don't micromanage:
-```bash
-"First use Backend Developer, then Frontend Developer, then Test Generator"
-```
-
- Describe the goal:
-```bash
-"Build a complete feature with backend, frontend, and tests"
-```
-
-### 3. Break Down Large Projects
-
-For very large projects, orchestrate in phases:
-
-```bash
-# Phase 1
-copilot agent run orchestrator "Set up project foundation with auth and database"
-
-# Review output, then Phase 2
-copilot agent run orchestrator "Add core features: projects, tasks, comments"
-
-# Review, then Phase 3
-copilot agent run orchestrator "Add real-time collaboration features"
-```
-
-### 4. Provide Examples
-
-Help agents understand your preferences:
-
-```bash
-copilot agent run orchestrator "Build a REST API similar to GitHub's API:
-- Resource-oriented endpoints
-- JSON responses
-- Pagination with Link headers
-- Rate limiting"
-```
-
-### 5. Specify Integration Points
-
-For parallel work, define how pieces connect:
-
-```bash
-"Build frontend and backend in parallel. Frontend should call these API endpoints:
-GET /api/posts, POST /api/posts, PUT /api/posts/:id"
-```
-
-## Troubleshooting Multi-Agent Workflows
-
-### Problem: Agents produce inconsistent output
-
-**Solution:** Have Orchestrator define standards upfront:
-```
-"Use TypeScript throughout. Follow REST naming conventions. Use the same error response format."
-```
-
-### Problem: Integration issues between agents' work
-
-**Solution:** Define contracts explicitly:
-```
-"Backend Developer: expose API at /api/v1/... with OpenAPI spec
-Frontend Developer: consume API using the provided OpenAPI spec"
-```
-
-### Problem: Too much back-and-forth
-
-**Solution:** Include all context in the orchestration request rather than iterating.
-
-## Next Steps
-
-- **[Best Practices](./best-practices.md)** - Advanced tips for using agents
-- **[Agent Guide](./agent-guide.md)** - Deep dive on each agent's capabilities
-- **[CLI vs IDE](./cli-vs-ide.md)** - Platform-specific orchestration tips
-
----
-
-**Ready to orchestrate?** Start with simple two-agent workflows, then progress to complex multi-phase orchestrations as you gain experience.
+- [Agent Guide](agent-guide.md)
+- [Invocation](invocation.md)
+- [Troubleshooting](troubleshooting.md)

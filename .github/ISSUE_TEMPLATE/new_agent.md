@@ -10,7 +10,7 @@ assignees: ''
 
 **Agent Name**: [Proposed name]
 
-**Category**: [orchestration/fullstack/coding/testing/design/productivity/devops/debugging]
+**Category**: [orchestration/fullstack/coding/testing/design/productivity/devops/automation/debugging]
 
 **Description**: [Brief description of what the agent does]
 
@@ -30,13 +30,16 @@ assignees: ''
 
 **Works with**: [Other agents or tools this integrates with]
 
-**Handoffs**: [If this agent hands off to other agents, which ones?]
+**Delegates to**: [Sub-agents it spawns with the `Agent` tool, if any]
+
+**Model / tools**: [e.g., sonnet; Read, Glob, Grep]
 
 ## Implementation Status
 
 - [ ] Agent file created
-- [ ] Tested in CLI
-- [ ] Tested in IDE
+- [ ] Passes `bash scripts/validate-agents.sh`
+- [ ] Tested with `@name` in a session
+- [ ] Tested with `claude --agent name`
 - [ ] Documentation complete
 - [ ] Examples provided
 - [ ] Ready for PR
